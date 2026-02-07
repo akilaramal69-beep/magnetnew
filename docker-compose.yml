@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - pikpak_data:/app
+    environment:
+      - PIKPAK_USERNAME=${PIKPAK_USERNAME}
+      - PIKPAK_PASSWORD=${PIKPAK_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY:-change_this_secret_key}
+    restart: unless-stopped
+
+volumes:
+  pikpak_data:

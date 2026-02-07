@@ -50,6 +50,13 @@ const api = {
         });
     },
 
+    register(username, password) {
+        return this.request('/register', {
+            method: 'POST',
+            body: { username, password }
+        });
+    },
+
     logout() {
         return this.request('/logout', { method: 'POST' });
     },
@@ -568,31 +575,66 @@ function navigateToIndex(index) {
 // Event Handlers
 // ============================================
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+// Auth Toggle Logic
+let isRegister = false;
+document.getElementById('toggle-auth').addEventListener('click', (e) => {
+    e.preventDefault();
+    isRegister = !isRegister;
+
+    const title = document.getElementById('auth-title');
+    const btn = document.getElementById('auth-btn');
+    const toggleText = document.getElementById('toggle-text');
+
+    if (isRegister) {
+        title.textContent = 'Create Account';
+        btn.querySelector('.btn-text').textContent = 'Register';
+        toggleText.innerHTML = 'Already have an account? <a href="#" id="toggle-auth-link">Sign in</a>';
+    } else {
+        title.textContent = 'Sign In';
+        btn.querySelector('.btn-text').textContent = 'Sign In';
+        toggleText.innerHTML = 'New user? <a href="#" id="toggle-auth-link">Create an account</a>';
+    }
+
+    // Re-bind the toggle link since we replaced innerHTML
+    document.getElementById('toggle-auth-link').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        document.getElementById('toggle-auth').click();
+    });
+});
+
+document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const btn = document.getElementById('login-btn');
+    const btn = document.getElementById('auth-btn');
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
     setButtonLoading(btn, true);
 
     try {
-        const data = await api.login(username, password);
-        state.user = data.user;
-        document.getElementById('user-display').textContent = state.user.username;
-        showScreen('dashboard-screen');
-        showToast('Welcome back!', 'success');
+        if (isRegister) {
+            await api.register(username, password);
+            showToast('Account created! Please sign in.', 'success');
+            // Switch back to login
+            document.getElementById('toggle-auth').click();
+        } else {
+            const data = await api.login(username, password);
+            state.user = data.user;
+            document.getElementById('user-display').textContent = state.user.username;
+            showScreen('dashboard-screen');
+            showToast('Welcome back!', 'success');
 
-        // Load initial data
-        loadTasks();
-        loadFiles();
+            // Load initial data
+            loadTasks();
+            loadFiles();
 
-        // Start polling for task updates
-        state.pollInterval = setInterval(loadTasks, 10000);
+            // Start polling for task updates
+            if (state.pollInterval) clearInterval(state.pollInterval);
+            state.pollInterval = setInterval(loadTasks, 10000);
+        }
     } catch (error) {
-        console.error('Login failed:', error);
-        showToast(error.message || 'Login failed', 'error');
+        console.error('Auth failed:', error);
+        showToast(error.message || 'Authentication failed', 'error');
     } finally {
         setButtonLoading(btn, false);
     }
